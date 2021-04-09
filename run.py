@@ -16,7 +16,7 @@ def run():
 
     # Запуск парсера
     p = ParserGis(url=url)
-    p.parser(next_page=True)
+    p.parser_pages(next_page=True)
     print(p.links)
     result = Crawl(p.links, export='csv')
 

@@ -6,6 +6,7 @@ import time
 import random
 import json, csv
 import sys
+import os
 
 sys.setrecursionlimit(20000)
 
@@ -20,13 +21,20 @@ class ConfigSpider(object):
     def __init__(self):
         self.links = []
         self.result = {}
-        self.driver = webdriver.Chrome(
-            executable_path=self.pathD,
-            options=self.options
-        )
+        if os.path.exists(self.pathD):
+            self.driver = webdriver.Chrome(
+                executable_path=self.pathD,
+                options=self.options
+            )
+        else:
+            raise FileExistsError("Не найден chromedriver. "\
+                                  "Скачать: https://chromedriver.storage.googleapis.com/index.html?path=88.0.4324.96/")
+
         self.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
         self.click_next_page = '//*[@id="root"]/div/div/div[1]/div[1]/div[2]/div/div/div[2]/div/div/div/div[2]/div[' \
                             '2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
+        self.select_obj_href = "div._1h3cgic > a._pbcct4"
+        self.click_more_phone = '//*[@class="_b0ke8"]/a'
 
 
 class ParserGis(ConfigSpider):
@@ -52,26 +60,26 @@ class ParserGis(ConfigSpider):
 
     def __parser(self):
         time.sleep(random.randint(2, 6))
-        href = self.driver.find_elements_by_css_selector("div._1h3cgic > a._pbcct4")
+        href = self.driver.find_elements_by_css_selector(self.select_obj_href)
 
         for elem in href:
             self.links.append(elem.get_attribute('href').split("?")[0])
 
-    def parser(self, next_page=None):
+    def parser_pages(self, next_page=None):
         self.__parser()
         if next_page or next_page is None:
-            self.next_pages()
+            self.__next_pages()
         else:
             print(f"Собрано ссылок {len(self.links)}")
             return self.links
 
-    def next_pages(self):
+    def __next_pages(self):
         if "2gis" in self.driver.current_url:
             try:
                 self.driver.find_element_by_xpath(self.click_next_page).click()
-                self.parser()
+                self.parser_pages()
             except NoSuchElementException:
-                self.parser(next_page=False)
+                self.parser_pages(next_page=False)
                 self.driver.close()
                 self.driver.quit()
 
@@ -87,20 +95,20 @@ class Crawl(ParserGis):
         while __url < len(self.__links):
             self.driver.get(self.__links[__url])
             time.sleep(random.randint(2, 3))
+            # try:
             try:
-                try:
-                    click_more_phone = self.driver.find_element_by_xpath('//*[@class="_b0ke8"]/a')
-                    self.driver.execute_script("arguments[0].click();", click_more_phone)
-                except NoSuchElementException:
-                    self.driver.get(self.__links[__url + 1])
+                click_more_phone = self.driver.find_element_by_xpath(self.click_more_phone)
+                self.driver.execute_script("arguments[0].click();", click_more_phone)
+            except NoSuchElementException:
+                self.driver.get(self.__links[__url + 1])
 
-            except ElementClickInterceptedException:
-
-                click_scroll = self.driver.find_element_by_xpath('//*[@class="_1kmhi0c"]/div').click()
-                self.driver.execute_script("arguments[0].click();", click_scroll)
-
-                click_more_phone_e = self.driver.find_element_by_xpath('//*[@class="_b0ke8"]/a')
-                self.driver.execute_script("arguments[0].click();", click_more_phone_e)
+            # except ElementClickInterceptedException:
+            #
+            #     click_scroll = self.driver.find_element_by_xpath('//*[@class="_1kmhi0c"]/div').click()
+            #     self.driver.execute_script("arguments[0].click();", click_scroll)
+            #
+            #     click_more_phone_e = self.driver.find_element_by_xpath('//*[@class="_b0ke8"]/a')
+            #     self.driver.execute_script("arguments[0].click();", click_more_phone_e)
 
             name = self.driver.find_element_by_xpath('//h1').text
             phones = self.driver.find_elements_by_css_selector("div._49kxlr > div._b0ke8 > a._1nped2zk")
