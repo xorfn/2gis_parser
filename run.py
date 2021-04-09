@@ -18,7 +18,7 @@ def run():
     p = ParserGis(url=url)
     p.parser_pages(next_page=True)
     print(p.links)
-    result = Crawl(p.links, export='csv')
+    result = Crawl(p.links, export='json')
 
     return result()
 

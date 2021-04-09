@@ -137,7 +137,7 @@ class Crawl(ParserGis):
                 }
 
                 print([phone.get_attribute('href').split(":")[1] for phone in phones])
-                with open("2gis", "a") as file:
+                with open("2gis.csv", "a") as file:
                     writer = csv.writer(file, delimiter=";", lineterminator="\r")
                     writer.writerow((org_to_csv['name'], org_to_csv['phones'], ', '.join(org_to_csv['emails'])))
                 __url += 1
