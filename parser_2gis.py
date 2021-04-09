@@ -33,23 +33,22 @@ class ParserGis(ConfigSpider):
     def __init__(self, url=None):
         ConfigSpider.__init__(self)
         self.__url = url
-        self.settings(self.close_popup)
+        if self.__url:
+            self.settings(self.close_popup)
 
     def settings(self, close_popup):
-        if self.__url:
+        try:
+            self.driver.get(self.__url)
+            print(f"Запущено: {self.__url}")
+        except Exception as e:
+            print(f"Что-то пошло не так: {e}")
 
-            try:
-                self.driver.get(self.__url)
-                print(f"Запущено: {self.__url}")
-            except Exception as e:
-                print(f"Что-то пошло не так: {e}")
-
-            try:
-                self.driver.find_element_by_xpath(close_popup)
-                self.driver.find_element_by_xpath(close_popup).click()
-                print("Успешно закрыто модальное окно для cookies")
-            except NoSuchElementException:
-                print(f"Элемента нет")
+        try:
+            self.driver.find_element_by_xpath(close_popup)
+            self.driver.find_element_by_xpath(close_popup).click()
+            print("Успешно закрыто модальное окно для cookies")
+        except NoSuchElementException:
+            print(f"Элемента нет")
 
     def __parser(self):
         time.sleep(random.randint(2, 6))
