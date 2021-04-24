@@ -3,8 +3,8 @@ from parser_2gis import ParserGis, Crawl, ConfigSpider
 
 def run():
     # Включкение безголового режима
-    ConfigSpider.options.headless = False
-    # Ссылка на chromedriver
+    ConfigSpider.options.headless = True
+    # Ссылка на web_driver
     ConfigSpider.pathD = r'C:\Users\Xorex\PycharmProjects\2gis_parser\driver\geckodriver.exe'
     # Установка юзер агента
     ConfigSpider.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ("

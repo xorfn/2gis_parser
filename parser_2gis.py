@@ -10,11 +10,12 @@ from selenium.common.exceptions import NoSuchElementException
 
 sys.setrecursionlimit(20000)
 
+# Скачать web_driver
+# https://github.com/mozilla/geckodriver/releases
 
-# https://chromedriver.storage.googleapis.com/index.html
-# https://peter.sh/experiments/chromium-command-line-switches/
 
 class ConfigSpider(object):
+
     pathD = ''
     options = webdriver.FirefoxOptions()
 
@@ -22,17 +23,13 @@ class ConfigSpider(object):
         self.links = []
         self.result = {}
         if os.path.exists(self.pathD):
-            self.driver = webdriver.Firefox(
-                executable_path=self.pathD,
-                options=self.options
-            )
+            self.driver = webdriver.Firefox(executable_path=self.pathD, options=self.options)
         else:
-            raise FileExistsError("Не найден chromedriver. "\
-                                  "Скачать: https://chromedriver.storage.googleapis.com/index.html?path=88.0.4324.96/")
+            raise FileExistsError("Не найден web_driver.")
 
         self.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
         self.click_next_page = '//*[@id="root"]/div/div/div[1]/div[1]/div[2]/div/div/div[2]/div/div/div/div[2]/div[' \
-                            '2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
+                               '2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
         self.select_obj_href = "div._1h3cgic > a._pbcct4"
         self.click_more_phone = '//*[@class="_b0ke8"]/a'
 
@@ -52,7 +49,6 @@ class ParserGis(ConfigSpider):
             print(f"Что-то пошло не так: {e}")
 
         try:
-            self.driver.find_element_by_xpath(close_popup)
             self.driver.find_element_by_xpath(close_popup).click()
             print("Успешно закрыто модальное окно для cookies")
         except NoSuchElementException:
@@ -95,20 +91,12 @@ class Crawl(ParserGis):
         while __url < len(self.__links):
             self.driver.get(self.__links[__url])
             time.sleep(random.randint(2, 3))
-            # try:
+
             try:
                 click_more_phone = self.driver.find_element_by_xpath(self.click_more_phone)
                 self.driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
                 self.driver.get(self.__links[__url + 1])
-
-            # except ElementClickInterceptedException:
-            #
-            #     click_scroll = self.driver.find_element_by_xpath('//*[@class="_1kmhi0c"]/div').click()
-            #     self.driver.execute_script("arguments[0].click();", click_scroll)
-            #
-            #     click_more_phone_e = self.driver.find_element_by_xpath('//*[@class="_b0ke8"]/a')
-            #     self.driver.execute_script("arguments[0].click();", click_more_phone_e)
 
             name = self.driver.find_element_by_xpath('//h1').text
             phones = self.driver.find_elements_by_css_selector("div._49kxlr > div._b0ke8 > a._1nped2zk")
