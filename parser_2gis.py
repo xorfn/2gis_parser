@@ -1,12 +1,12 @@
-from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
-from multiprocessing import Pool
-
-import time
-import random
-import json, csv
-import sys
+import csv
+import json
 import os
+import random
+import sys
+import time
+
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
 
 sys.setrecursionlimit(20000)
 
@@ -16,13 +16,13 @@ sys.setrecursionlimit(20000)
 
 class ConfigSpider(object):
     pathD = ''
-    options = webdriver.ChromeOptions()
+    options = webdriver.FirefoxOptions()
 
     def __init__(self):
         self.links = []
         self.result = {}
         if os.path.exists(self.pathD):
-            self.driver = webdriver.Chrome(
+            self.driver = webdriver.Firefox(
                 executable_path=self.pathD,
                 options=self.options
             )

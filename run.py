@@ -5,7 +5,7 @@ def run():
     # Включкение безголового режима
     ConfigSpider.options.headless = False
     # Ссылка на chromedriver
-    ConfigSpider.pathD = r'C:\Users\Xorex\PycharmProjects\sel\chromrdriver\chromedriver.exe'
+    ConfigSpider.pathD = r'C:\Users\Xorex\PycharmProjects\2gis_parser\driver\geckodriver.exe'
     # Установка юзер агента
     ConfigSpider.options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ("
                                       "KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36")
