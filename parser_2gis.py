@@ -16,10 +16,8 @@ sys.setrecursionlimit(20000)
 # https://github.com/mozilla/geckodriver/releases
 
 
-
 class ConfigSpider(ABC):
     def __init__(self):
-        print("Базовый класс ConfigSpider")
         self._url = ""
         self._path_dir = r'C:\Users\Xorex\PycharmProjects\2gis_parser\driver\geckodriver.exe'
         self.user_agent = "User-agent/5.0"
@@ -92,7 +90,7 @@ class ParserGis(ConfigSpider):
     def start_url(self, value):
         if self._url == '':
             self._url = value
-            self.run_parser()
+            self.execute_parser()
 
     @classmethod
     def prepare_driver(cls):
@@ -104,7 +102,7 @@ class ParserGis(ConfigSpider):
         except NoSuchElementException:
             print(f"Элемента нет")
 
-    def run_parser(self):
+    def execute_parser(self):
         try:
             self._driver.get(self._url)
             print(f"Запущено: {self._url}")

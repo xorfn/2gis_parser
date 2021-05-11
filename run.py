@@ -7,7 +7,6 @@ def parser():
                 "%D0%BA%D0%B8%D0%B5/rubricId/305/filters/bound%3Bcovid_services_home%3Bgeneral_payment_type_card" \
                 "%3Bhas_site "
     p.parser_pages(next_page=True)
-    print(p.queue)
     result = Crawl(p.queue, export='json')
     return result()
 
