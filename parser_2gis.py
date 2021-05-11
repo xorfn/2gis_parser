@@ -4,6 +4,7 @@ import os
 import random
 import sys
 import time
+import threading, queue
 from abc import ABC, abstractmethod
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -15,6 +16,7 @@ sys.setrecursionlimit(20000)
 # https://github.com/mozilla/geckodriver/releases
 
 
+
 class ConfigSpider(ABC):
     def __init__(self):
         print("Базовый класс ConfigSpider")
@@ -22,7 +24,7 @@ class ConfigSpider(ABC):
         self._path_dir = r'C:\Users\Xorex\PycharmProjects\2gis_parser\driver\geckodriver.exe'
         self.user_agent = "User-agent/5.0"
         self.headless = False
-        self.links = []
+        self.queue = queue.Queue()
         self.result = {}
         self._options = webdriver.FirefoxOptions()
         self._profile = webdriver.FirefoxProfile()
@@ -90,39 +92,41 @@ class ParserGis(ConfigSpider):
     def start_url(self, value):
         if self._url == '':
             self._url = value
-            self.run_parser(self.close_popup)
+            self.run_parser()
 
     @classmethod
     def prepare_driver(cls):
         return cls.start_url
 
-    def run_parser(self, close_popup):
+    def close_popup_cookies(self):
+        try:
+            self._driver.find_element_by_xpath(self.close_popup).click()
+        except NoSuchElementException:
+            print(f"Элемента нет")
+
+    def run_parser(self):
         try:
             self._driver.get(self._url)
             print(f"Запущено: {self._url}")
         except Exception as e:
             print(f"Что-то пошло не так: {e}")
 
-        try:
-            self._driver.find_element_by_xpath(close_popup).click()
-            print("Успешно закрыто модальное окно для cookies")
-        except NoSuchElementException:
-            print(f"Элемента нет")
+        self.close_popup_cookies()
 
     def __parser(self):
         time.sleep(random.randint(2, 6))
         href = self._driver.find_elements_by_css_selector(self.select_obj_href)
 
         for elem in href:
-            self.links.append(elem.get_attribute('href').split("?")[0])
+            self.queue.put(elem.get_attribute('href').split("?")[0])
 
     def parser_pages(self, next_page=None):
         self.__parser()
         if next_page or next_page is None:
             self.__next_pages()
         else:
-            print(f"Собрано ссылок {len(self.links)}")
-            return self.links
+            print(f"Собрано ссылок {self.queue.qsize()}")
+            return self.queue
 
     def __next_pages(self):
         if "2gis" in self._driver.current_url:
@@ -178,30 +182,36 @@ class Crawl(ParserGis):
             writer = csv.writer(file, delimiter=";", lineterminator="\r")
             writer.writerow((org_to_csv['name'], org_to_csv['phones'], ', '.join(org_to_csv['emails'])))
 
-    def __call__(self):
-        __url = 0
-        while __url < len(self.__links):
-            self._driver.get(self.__links[__url])
+    def execute_crawler(self):
+        while True:
+            item = self.__links.get()
+            self._driver.get(item)
+
             time.sleep(random.randint(2, 3))
 
             try:
                 click_more_phone = self._driver.find_element_by_xpath(self.click_more_phone)
                 self._driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
-                self._driver.get(self.__links[__url + 1])
+                self._driver.get(item+1)
 
             h1, phones, emails = self.collect_data(self.h1, self.phones, self.emails)
 
             if self.export == 'json':
                 self.export_json(h1, phones, emails)
-                __url += 1
 
             elif self.export == 'csv':
                 self.export_csv(h1, phones, emails)
-                __url += 1
             else:
                 raise ValueError(f'Несуществует экспорта для {self.export}. Выбирите формат экспорта csv или json')
 
-        print(f"Создан фаил 2gis.{self.export}")
-        self._driver.close()
-        self._driver.quit()
+            self.__links.task_done()
+
+            if self.__links.empty():
+                print(f"Создан фаил 2gis.{self.export}")
+                self._driver.close()
+                self._driver.quit()
+
+    def __call__(self, *args, **kwargs):
+        threading.Thread(target=self.execute_crawler(), daemon=True).start()
+        self.queue.join()
