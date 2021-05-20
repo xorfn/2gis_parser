@@ -15,63 +15,32 @@ sys.setrecursionlimit(20000)
 # Скачать web_driver
 # https://github.com/mozilla/geckodriver/releases
 
-
-class ConfigSpider(ABC):
+class Conf:
     def __init__(self):
-        self._url = ""
-        self._path_dir = r'C:\Users\Xorex\PycharmProjects\2gis_parser\driver\geckodriver.exe'
-        self.user_agent = "User-agent/5.0"
-        self.headless = False
-        self.queue = queue.Queue()
-        self.result = {}
         self._options = webdriver.FirefoxOptions()
         self._profile = webdriver.FirefoxProfile()
+        self._path_dir = r'C:\Users\Xorex\PycharmProjects\2gis_parser\driver\geckodriver.exe'
+        self.user_agent = "User-agent/5.0"
         self._driver = self.web_driver()
+        self.queue = queue.Queue()
         self.close_popup = self.close_popup()
         self.click_next_page = self.click_next_page()
         self.select_obj_href = self.select_obj_href()
         self.click_more_phone = self.click_more_phone()
 
-    @abstractmethod
-    def web_driver(self):
-        pass
-
-    @abstractmethod
-    def close_popup(self):
-        pass
-
-    @abstractmethod
-    def click_next_page(self):
-        pass
-
-    @abstractmethod
-    def select_obj_href(self):
-        pass
-
-    @abstractmethod
-    def click_more_phone(self):
-        pass
-
-
-class ParserGis(ConfigSpider):
-    def __init__(self):
-        super().__init__()
-
     def web_driver(self):
         if os.path.exists(self._path_dir):
-            self._options.headless = self.headless
             self._profile.set_preference("general.useragent.override", f'{self.user_agent}')
             return webdriver.Firefox(self._profile, executable_path=self._path_dir, options=self._options)
         else:
             raise FileExistsError("Не найден web_driver.")
-
     def close_popup(self):
         close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
         return close_popup
 
     def click_next_page(self):
         click_next_page = '//*[@id="root"]/div/div/div[1]/div[1]/div[2]/div/div/div[2]/div/div/div/div[2]/div[' \
-                               '2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
+                          '2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
         return click_next_page
 
     def select_obj_href(self):
@@ -81,6 +50,11 @@ class ParserGis(ConfigSpider):
     def click_more_phone(self):
         click_more_phone = '//*[@class="_b0ke8"]/a'
         return click_more_phone
+
+class ParserGis(Conf):
+    def __init__(self):
+        super().__init__()
+        self._url = ''
 
     @property
     def start_url(self):
@@ -92,9 +66,15 @@ class ParserGis(ConfigSpider):
             self._url = value
             self.execute_parser()
 
-    @classmethod
-    def prepare_driver(cls):
-        return cls.start_url
+    @property
+    def headless(self):
+        return self._options
+
+    @headless.setter
+    def headless(self, v):
+        if self._options:
+            self._options.headless = v
+
 
     def close_popup_cookies(self):
         try:
@@ -136,10 +116,14 @@ class ParserGis(ConfigSpider):
                 self._driver.close()
                 self._driver.quit()
 
+    def queue_exp(self):
+        return self.queue.qsize()
 
-class Crawl(ParserGis):
+
+class Crawl(Conf):
     def __init__(self, links, export=None):
         super().__init__()
+        self.result = {}
         self.__links = links
         self.export = export
         self.h1 = '//h1'
@@ -191,7 +175,7 @@ class Crawl(ParserGis):
                 click_more_phone = self._driver.find_element_by_xpath(self.click_more_phone)
                 self._driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
-                self._driver.get(item+1)
+                self._driver.get(item + 1)
 
             h1, phones, emails = self.collect_data(self.h1, self.phones, self.emails)
 
