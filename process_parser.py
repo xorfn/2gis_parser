@@ -5,6 +5,7 @@ import random
 import sys
 import time
 import threading, queue
+
 from abc import ABC, abstractmethod
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -14,6 +15,7 @@ sys.setrecursionlimit(20000)
 
 # Скачать web_driver
 # https://github.com/mozilla/geckodriver/releases
+
 
 class Config:
 
@@ -53,7 +55,6 @@ class ParserGis(Config):
 
     @property
     def close_popup(self):
-        close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
         return self._close_popup
 
     @close_popup.setter
@@ -63,8 +64,6 @@ class ParserGis(Config):
 
     @property
     def click_next_page(self):
-        click_next_page = '//*[@id="root"]/div/div/div[1]/div[1]/div[2]/div/div/div[2]/div/div/div/div[2]/div[' \
-                          '2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
         return self._click_next_page
 
     @click_next_page.setter
@@ -74,7 +73,6 @@ class ParserGis(Config):
 
     @property
     def select_obj_href(self):
-        select_obj_href = "div._1h3cgic > a._pbcct4"
         return self._select_obj_href
 
     @select_obj_href.setter
@@ -143,7 +141,7 @@ class Crawl(Config):
         self.result = {}
         self.__links = links
         self.export = export
-        self.click_more_phone = self.click_more_phone()
+        self._click_more_phone = None
         self._fetch_h1 = None
         self._fetch_phones = None
         self._fetch_emails = None
@@ -160,9 +158,18 @@ class Crawl(Config):
     def fetch_emails(self):
         return self._fetch_emails
 
-    def click_more_phone(self):
-        click_more_phone = '//*[@class="_b0ke8"]/a'
-        return click_more_phone
+    @property
+    def button(self):
+        return self._click_more_phone
+
+    @button.setter
+    def button(self, value):
+        if self._click_more_phone is None:
+            self._click_more_phone = value
+
+    # def click_more_phone(self):
+    #     click_more_phone = '//*[@class="_b0ke8"]/a'
+    #     return click_more_phone
 
     @fetch_h1.setter
     def fetch_h1(self, value):
@@ -224,34 +231,40 @@ class Crawl(Config):
             time.sleep(random.randint(2, 3))
 
             try:
-                click_more_phone = self._driver.find_element_by_xpath(self.click_more_phone)
+                click_more_phone = self._driver.find_element_by_xpath(self._click_more_phone)
                 self._driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
                 self._driver.get(item + 1)
 
             h1, phones, emails = self.collect_data(self._fetch_h1, self._fetch_phones, self._fetch_emails)
+            try:
+                if self.export == 'json':
+                    self.export_json(h1, phones, emails)
 
-            if self.export == 'json':
-                self.export_json(h1, phones, emails)
-
-            elif self.export == 'csv':
-                self.export_csv(h1, phones, emails)
-            elif self.export == "db":
-                self.export_db(h1, phones, emails)
-
+                elif self.export == 'csv':
+                    self.export_csv(h1, phones, emails)
+                elif self.export == "db":
+                    self.export_db(h1, phones, emails)
+                else:
+                    raise ValueError(f'Несуществует экспорта для {self.export}. Выберите формат экспорта csv или json')
+            except ValueError as e:
+                print(re)
+                self._driver.close()
+                self._driver.quit()
+                break
             else:
-                raise ValueError(f'Несуществует экспорта для {self.export}. Выбирите формат экспорта csv или json')
-
-            self.__links.task_done()
+                self.__links.task_done()
 
             if self.__links.empty():
                 print(f"Создан фаил 2gis.{self.export}")
                 self._driver.close()
                 self._driver.quit()
+                break
 
     def __call__(self, *args, **kwargs):
         threading.Thread(target=self.execute_crawler(), daemon=True).start()
         self.queue.join()
+        print("Все объекты обработаны")
 
 
 class GenSpider(ABC):
