@@ -9,7 +9,7 @@ import threading, queue
 from abc import ABC, abstractmethod
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-
+from models.sqlite import Models
 sys.setrecursionlimit(20000)
 
 
@@ -135,16 +135,18 @@ class ParserGis(Config):
         return self.queue.qsize()
 
 
-class Crawl(Config):
-    def __init__(self, links, export=None):
+class Crawl(Config, Models):
+    def __init__(self, links, export=None, config_table=None):
         super().__init__()
         self.result = {}
         self.__links = links
         self.export = export
+        self.config_table = config_table
         self._click_more_phone = None
         self._fetch_h1 = None
         self._fetch_phones = None
         self._fetch_emails = None
+        Models.__init__(self)
 
     @property
     def fetch_h1(self):
@@ -167,9 +169,6 @@ class Crawl(Config):
         if self._click_more_phone is None:
             self._click_more_phone = value
 
-    # def click_more_phone(self):
-    #     click_more_phone = '//*[@class="_b0ke8"]/a'
-    #     return click_more_phone
 
     @fetch_h1.setter
     def fetch_h1(self, value):
@@ -221,7 +220,33 @@ class Crawl(Config):
             writer.writerow((org_to_csv['name'], org_to_csv['phones'], ', '.join(org_to_csv['emails'])))
 
     def export_db(self, h1, phones, emails):
-        pass
+        table, column = self.config_table
+
+        check_db = f"""select * from {table}"""
+        create_table = f"""CREATE TABLE {table} ({column[0]} text, {column[1]} text, {column[2]} text)"""
+
+        data_db = {
+
+            'h1': h1,
+            'phones': [phone.get_attribute('href').split(":")[1] for phone in phones],
+            'emails': [email.get_attribute('href').split(":")[1] for email in emails if
+                       "@" in email.get_attribute('href').split(":")[1]]
+        }
+
+        data = data_db['h1'], ', '.join(data_db['phones']), ', '.join(data_db['emails'])
+
+        try:
+            self.execute_db(check_db)
+        except Exception as e:
+            if "no such table" in e.args[0]:
+                self.execute_db(create_table.format(table=table, *column), commit_db=True)
+
+            write_data = """insert into {table} values (?, ?, ?)"""
+            self.execute_db(write_data.format(table=table, *column), (*data,), commit_db=True)
+
+        else:
+            write_data = """insert into {table} values (?, ?, ?)"""
+            self.execute_db(write_data.format(table=table, *column), (*data,), commit_db=True)
 
     def execute_crawler(self):
         while True:
@@ -248,7 +273,7 @@ class Crawl(Config):
                 else:
                     raise ValueError(f'Несуществует экспорта для {self.export}. Выберите формат экспорта csv или json')
             except ValueError as e:
-                print(re)
+                print(e)
                 self._driver.close()
                 self._driver.quit()
                 break
@@ -267,8 +292,9 @@ class Crawl(Config):
         print("Все объекты обработаны")
 
 
-class GenSpider(ABC):
+class GenSpider(ABC, Models):
     def __init__(self):
+        super().__init__()
         Config._path_dir = self.driver()
         Config._options.headless = self.headless()
         Config._user_agent = self.user_agent()
@@ -281,35 +307,74 @@ class GenSpider(ABC):
 
     @abstractmethod
     def driver(self):
-        pass
+        """
+        Путь к веб-драйверу
+        :return: str
+        """
 
     @abstractmethod
     def headless(self):
-        pass
+        """
+        Установка режима безголовы
+        :return: bool
+        """
 
     @abstractmethod
     def user_agent(self):
-        pass
+        """
+        Установка юзер-агента
+        :return: str
+        """
 
     @abstractmethod
     def start_url(self):
-        pass
+        """
+        Стартовый URL
+        :return: str
+        """
 
     @abstractmethod
     def config_window_parser(self):
-        pass
+        """
+        Конфигуратор окна. Закрытие всяких попапов, хождение по пагинации, выбор селекта детального объекта
+        :return: property
+        """
 
+    def table_db(self):
+        """
+        Название таблтцы БД
+        :return:
+        """
+
+    def column_db(self):
+        """
+        Столбцы базы первичный ключ создается на уровень ниже
+        :return:
+        """
     @abstractmethod
     def export_data(self):
-        pass
+        """
+        Выбор формата экспорта данных
+        :return: str
+        """
+
+    def __config_table(self):
+        if self.export_data() == "db":
+            return self.table_db(), self.column_db()
 
     def __crawler(self):
-        return Crawl(self.parser.queue, export=self.export_data())
+        return Crawl(self.parser.queue, export=self.export_data(), config_table=self.__config_table())
 
     @abstractmethod
     def fetch_element(self):
-        pass
+        """
+        Извлечение элементов
+        :return: property
+        """
 
     @abstractmethod
-    def crawler(self):
-        pass
+    def __call__(self, *args, **kwargs):
+        """
+        Обязательно! Вызов краулера
+        :return: object class Crawl __call__
+        """
