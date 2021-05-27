@@ -5,7 +5,7 @@ import random
 import sys
 import time
 import threading, queue
-
+from multiprocessing import JoinableQueue
 from abc import ABC, abstractmethod
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
@@ -25,8 +25,8 @@ class Config:
 
     def __init__(self):
         self._profile = webdriver.FirefoxProfile()
-        self._driver = self.web_driver()
         self.queue = queue.Queue()
+        self._driver = self.web_driver()
 
     @property
     def path_dir(self):
@@ -118,6 +118,7 @@ class ParserGis(Config):
             self.__next_pages()
         else:
             print(f"Собрано ссылок {self.queue.qsize()}")
+            print(list(self.queue.queue))
             return self.queue
 
     def __next_pages(self):
@@ -139,7 +140,7 @@ class Crawl(Config, Models):
     def __init__(self, links, export=None, config_table=None):
         super().__init__()
         self.result = {}
-        self.__links = links
+        self._links = links
         self.export = export
         self.config_table = config_table
         self._click_more_phone = None
@@ -147,6 +148,10 @@ class Crawl(Config, Models):
         self._fetch_phones = None
         self._fetch_emails = None
         Models.__init__(self)
+
+    @property
+    def links(self):
+        return self._links
 
     @property
     def fetch_h1(self):
@@ -163,6 +168,10 @@ class Crawl(Config, Models):
     @property
     def button(self):
         return self._click_more_phone
+
+    @links.setter
+    def links(self, value):
+        self._links = value
 
     @button.setter
     def button(self, value):
@@ -223,7 +232,7 @@ class Crawl(Config, Models):
         table, column = self.config_table
 
         check_db = f"""select * from {table}"""
-        create_table = f"""CREATE TABLE {table} ({column[0]} text, {column[1]} text, {column[2]} text)"""
+        create_table = f"""CREATE TABLE {table} (PK INTEGER NOT NULL, {column[0]} TEXT, {column[1]} TEXT, {column[2]} TEXT, PRIMARY KEY (PK))"""
 
         data_db = {
 
@@ -241,16 +250,16 @@ class Crawl(Config, Models):
             if "no such table" in e.args[0]:
                 self.execute_db(create_table.format(table=table, *column), commit_db=True)
 
-            write_data = """insert into {table} values (?, ?, ?)"""
-            self.execute_db(write_data.format(table=table, *column), (*data,), commit_db=True)
+            write_data = f"""insert into {table} ({column[0]}, {column[1]}, {column[2]}) values (?, ?, ?)"""
+            self.execute_db(write_data, (*data,), commit_db=True)
 
         else:
-            write_data = """insert into {table} values (?, ?, ?)"""
-            self.execute_db(write_data.format(table=table, *column), (*data,), commit_db=True)
+            write_data = f"""insert into {table} ({column[0]}, {column[1]}, {column[2]}) values (?, ?, ?)"""
+            self.execute_db(write_data, (*data,), commit_db=True)
 
-    def execute_crawler(self):
+    def execute_crawler(self, links):
         while True:
-            item = self.__links.get()
+            item = links.get()
             self._driver.get(item)
 
             time.sleep(random.randint(2, 3))
@@ -259,7 +268,7 @@ class Crawl(Config, Models):
                 click_more_phone = self._driver.find_element_by_xpath(self._click_more_phone)
                 self._driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
-                self._driver.get(item + 1)
+                self._driver.get(item)
 
             h1, phones, emails = self.collect_data(self._fetch_h1, self._fetch_phones, self._fetch_emails)
             try:
@@ -278,21 +287,26 @@ class Crawl(Config, Models):
                 self._driver.quit()
                 break
             else:
-                self.__links.task_done()
+                links.task_done()
 
-            if self.__links.empty():
+            if links.empty():
                 print(f"Создан фаил 2gis.{self.export}")
                 self._driver.close()
                 self._driver.quit()
                 break
 
-    def __call__(self, *args, **kwargs):
-        threading.Thread(target=self.execute_crawler(), daemon=True).start()
-        self.queue.join()
+    def __call__(self):
+        thread = [
+            threading.Thread(target=self.execute_crawler, args=(self._links,), daemon=True)
+        ]
+        for t in thread:
+            t.start()
+        self._links.join()
+
         print("Все объекты обработаны")
 
 
-class GenSpider(ABC, Models):
+class GenSpider(ABC):
     def __init__(self):
         super().__init__()
         Config._path_dir = self.driver()
