@@ -5,7 +5,7 @@ from models.sqlite import SqliteDb
 
 class ExportData(SqliteDb):
     def __init__(self):
-        super(SqliteDb,self).__init__()
+        super(SqliteDb, self).__init__()
         self.result = {}
 
     def _export_to(self,h1, phones, emails, type_format="csv", config_table=None):
