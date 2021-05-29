@@ -1,15 +1,15 @@
-import csv
-import json
 import os
 import random
 import sys
 import time
 import threading, queue
-from multiprocessing import JoinableQueue
+
 from abc import ABC, abstractmethod
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from models.sqlite import Models
+from models.sqlite import SqliteDb
+from processing.export_data import ExportData
+
 sys.setrecursionlimit(20000)
 
 
@@ -47,11 +47,11 @@ class Config:
 
 class ParserGis(Config):
     def __init__(self):
-        super().__init__()
         self._url = None
         self._close_popup = None
         self._click_next_page = None
         self._select_obj_href = None
+        Config.__init__(self)
 
     @property
     def close_popup(self):
@@ -136,10 +136,8 @@ class ParserGis(Config):
         return self.queue.qsize()
 
 
-class Crawl(Config, Models):
+class Crawl(Config, ExportData):
     def __init__(self, links, export=None, config_table=None):
-        super().__init__()
-        self.result = {}
         self._links = links
         self.export = export
         self.config_table = config_table
@@ -147,7 +145,12 @@ class Crawl(Config, Models):
         self._fetch_h1 = None
         self._fetch_phones = None
         self._fetch_emails = None
-        Models.__init__(self)
+        Config.__init__(self)
+        SqliteDb.__init__(self)
+
+    @property
+    def name_db(self):
+        return self.db_name
 
     @property
     def links(self):
@@ -173,11 +176,14 @@ class Crawl(Config, Models):
     def links(self, value):
         self._links = value
 
+    @name_db.setter
+    def name_db(self,value):
+         self.db_name = value
+
     @button.setter
     def button(self, value):
         if self._click_more_phone is None:
             self._click_more_phone = value
-
 
     @fetch_h1.setter
     def fetch_h1(self, value):
@@ -200,87 +206,22 @@ class Crawl(Config, Models):
         emails = self._driver.find_elements_by_css_selector(email)
         return name, phones, emails
 
-    def export_json(self, h1, phones, emails):
-        org_json = {h1: [{
-            "phones": [phone.get_attribute('href').split(":")[1] for phone in phones],
-            "emails": [email.get_attribute('href').split(":")[1] for email in emails
-                       if "@" in email.get_attribute('href').split(":")[1]],
-        }]}
-
-        self.result.update(org_json)
-        print([phone.get_attribute('href').split(":")[1] for phone in phones])
-
-        type_json = json.dumps(self.result, ensure_ascii=False)
-        with open("company.json", "w", encoding="utf-8") as file:
-            file.write(type_json)
-
-    @staticmethod
-    def export_csv(h1, phones, emails):
-        org_to_csv = {
-            'name': h1,
-            'phones': [phone.get_attribute('href').split(":")[1] for phone in phones],
-            'emails': [email.get_attribute('href').split(":")[1] for email in emails if
-                       "@" in email.get_attribute('href').split(":")[1]]
-        }
-
-        print([phone.get_attribute('href').split(":")[1] for phone in phones])
-        with open("company.csv", "a") as file:
-            writer = csv.writer(file, delimiter=";", lineterminator="\r")
-            writer.writerow((org_to_csv['name'], org_to_csv['phones'], ', '.join(org_to_csv['emails'])))
-
-    def export_db(self, h1, phones, emails):
-        table, column = self.config_table
-
-        check_db = f"""select * from {table}"""
-        create_table = f"""CREATE TABLE {table} (PK INTEGER NOT NULL, {column[0]} TEXT, {column[1]} TEXT, {column[2]} TEXT, PRIMARY KEY (PK))"""
-
-        data_db = {
-
-            'h1': h1,
-            'phones': [phone.get_attribute('href').split(":")[1] for phone in phones],
-            'emails': [email.get_attribute('href').split(":")[1] for email in emails if
-                       "@" in email.get_attribute('href').split(":")[1]]
-        }
-
-        data = data_db['h1'], ', '.join(data_db['phones']), ', '.join(data_db['emails'])
-
-        try:
-            self.execute_db(check_db)
-        except Exception as e:
-            if "no such table" in e.args[0]:
-                self.execute_db(create_table.format(table=table, *column), commit_db=True)
-
-            write_data = f"""insert into {table} ({column[0]}, {column[1]}, {column[2]}) values (?, ?, ?)"""
-            self.execute_db(write_data, (*data,), commit_db=True)
-
-        else:
-            write_data = f"""insert into {table} ({column[0]}, {column[1]}, {column[2]}) values (?, ?, ?)"""
-            self.execute_db(write_data, (*data,), commit_db=True)
-
     def execute_crawler(self, links):
         while True:
             item = links.get()
             self._driver.get(item)
 
-            time.sleep(random.randint(2, 3))
+            #time.sleep(random.randint(2, 3))
 
             try:
                 click_more_phone = self._driver.find_element_by_xpath(self._click_more_phone)
                 self._driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
-                self._driver.get(item)
+                pass
 
             h1, phones, emails = self.collect_data(self._fetch_h1, self._fetch_phones, self._fetch_emails)
             try:
-                if self.export == 'json':
-                    self.export_json(h1, phones, emails)
-
-                elif self.export == 'csv':
-                    self.export_csv(h1, phones, emails)
-                elif self.export == "db":
-                    self.export_db(h1, phones, emails)
-                else:
-                    raise ValueError(f'Несуществует экспорта для {self.export}. Выберите формат экспорта csv или json')
+                self._export_to(h1, phones, emails, type_format=self.export, config_table=self.config_table)
             except ValueError as e:
                 print(e)
                 self._driver.close()
@@ -308,7 +249,6 @@ class Crawl(Config, Models):
 
 class GenSpider(ABC):
     def __init__(self):
-        super().__init__()
         Config._path_dir = self.driver()
         Config._options.headless = self.headless()
         Config._user_agent = self.user_agent()

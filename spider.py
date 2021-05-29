@@ -1,4 +1,4 @@
-from process_parser import GenSpider
+from processing.process_parser import GenSpider
 
 
 class SpiderApteki(GenSpider):
@@ -10,13 +10,13 @@ class SpiderApteki(GenSpider):
         return r'C:\Users\Xorex\PycharmProjects\2gis_parser\driver\geckodriver.exe'
 
     def headless(self):
-        return False
+        return True
 
     def user_agent(self):
         return "User-agent/6.0"
 
     def start_url(self):
-        return "https://2gis.ru/krasnodar/search/%D0%90%D0%BF%D1%82%D0%B5%D0%BA%D0%B8/filters/bound%3Bhas_site%3Bhas_photos%3Bgeneral_payment_type_card%3Bwork_time%3Dtoday%2Calltime"
+        return "https://2gis.ru/krasnodar/search/%D0%91%D0%B0%D0%BD%D0%B8/filters/bound%3Bsauna_steam_type_ir_bath"
 
     def config_window_parser(self):
         self.parser.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
@@ -24,10 +24,10 @@ class SpiderApteki(GenSpider):
         self.parser.select_obj_href = "div._1h3cgic > a._pbcct4"
 
     def export_data(self):
-        return 'csv'
+        return 'db'
 
     def table_db(self):
-        return "apteki"
+        return "bani"
 
     def column_db(self):
         return ['h1', 'phones', 'emails']
@@ -85,9 +85,8 @@ class SpiderFitness(GenSpider):
 
 
 if __name__ == "__main__":
-    # spider_fit = SpiderFitness()
-    # spider_fit()
+    #spider_fit = SpiderFitness()
+    spider_apt = SpiderApteki()
+    spider_apt()
 
-    spider_fit = SpiderApteki()
-    spider_fit()
 
