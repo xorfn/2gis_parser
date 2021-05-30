@@ -5,10 +5,10 @@ from models.sqlite import SqliteDb
 
 class ExportData(SqliteDb):
     def __init__(self):
-        super(SqliteDb, self).__init__()
         self.result = {}
+        super().__init__()
 
-    def _export_to(self,h1, phones, emails, type_format="csv", config_table=None):
+    def _export_to(self,link, h1, phones, emails, type_format="csv", config_table=None):
         if type_format == 'json':
             self.export_json(h1, phones, emails)
 
@@ -17,11 +17,11 @@ class ExportData(SqliteDb):
 
         elif type_format == "db":
             if all(config_table):
-                self.export_db(h1, phones, emails, config_table)
+                self.export_db(link, h1, phones, emails, config_table)
             else:
                 raise Exception("Нет данных о создаваемой таблице")
         else:
-            raise ValueError(f'Несуществует экспорта для {type_format}. Выберите формат экспорта csv или json')
+            raise Exception(f'Несуществует экспорта для {type_format}. Выберите формат экспорта csv или json')
 
     def export_json(self, h1, phones, emails):
         org_json = {h1: [{
@@ -51,31 +51,17 @@ class ExportData(SqliteDb):
             writer = csv.writer(file, delimiter=";", lineterminator="\r")
             writer.writerow((org_to_csv['name'], org_to_csv['phones'], ', '.join(org_to_csv['emails'])))
 
-    def export_db(self, h1, phones, emails, config_table):
+    def export_db(self, link, h1, phones, emails, config_table):
         table, column = config_table
-
-        check_db = f"""select * from {table}"""
-        create_table = f"""CREATE TABLE {table} (PK INTEGER NOT NULL, {column[0]} TEXT, {column[1]} TEXT, {column[2]} TEXT, PRIMARY KEY (PK))"""
 
         data_db = {
 
             'h1': h1,
-            'phones': [phone.get_attribute('href').split(":")[1] for phone in phones],
-            'emails': [email.get_attribute('href').split(":")[1] for email in emails if
-                       "@" in email.get_attribute('href').split(":")[1]]
+            'phones': ', '.join([phone.get_attribute('href').split(":")[1] for phone in phones]),
+            'emails': ', '.join([email.get_attribute('href').split(":")[1] for email in emails if
+                       "@" in email.get_attribute('href').split(":")[1]])
         }
 
-        data = data_db['h1'], ', '.join(data_db['phones']), ', '.join(data_db['emails'])
-
-        try:
-            self.execute_db(check_db)
-        except Exception as e:
-            if "no such table" in e.args[0]:
-                self.execute_db(create_table.format(table=table, *column), commit_db=True)
-
-            write_data = f"""insert into {table} ({column[0]}, {column[1]}, {column[2]}) values (?, ?, ?)"""
-            self.execute_db(write_data, (*data,), commit_db=True)
-
-        else:
-            write_data = f"""insert into {table} ({column[0]}, {column[1]}, {column[2]}) values (?, ?, ?)"""
-            self.execute_db(write_data, (*data,), commit_db=True)
+        write_data = f"""update {table} set {column[0]} = '{data_db['h1']}', {column[1]} = '{data_db['phones']}', 
+                        {column[2]}='{data_db['emails']}' where urls = '{link}' """
+        self.execute_db(write_data, commit_db=True)

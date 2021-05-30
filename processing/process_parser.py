@@ -15,43 +15,46 @@ sys.setrecursionlimit(20000)
 
 # Скачать web_driver
 # https://github.com/mozilla/geckodriver/releases
+# https://sites.google.com/chromium.org/driver/downloads
 
+class Driver:
 
-class Config:
-
-    _options = webdriver.FirefoxOptions()
-    _user_agent = None
-    _path_dir = None
+    options = webdriver.ChromeOptions()
+    user_agent = None
+    path_dir = None
 
     def __init__(self):
-        self._profile = webdriver.FirefoxProfile()
         self.queue = queue.Queue()
         self._driver = self.web_driver()
 
-    @property
-    def path_dir(self):
-        return self._path_dir
-
-    @path_dir.setter
-    def path_dir(self, value):
-        if self._path_dir is None:
-            self._path_dir = value
-
     def web_driver(self):
-        if os.path.exists(self._path_dir):
-            self._profile.set_preference("general.useragent.override", f'{self._user_agent}')
-            return webdriver.Firefox(self._profile, executable_path=self._path_dir, options=self._options)
+        if os.path.exists(self.path_dir):
+            return webdriver.Chrome(
+                executable_path=self.path_dir,
+                chrome_options=self.options)
         else:
-            raise FileExistsError(f"Не найден web_driver на пути {self._path_dir}")
+            raise FileExistsError(f"Не найден web_driver на пути {self.path_dir}")
 
 
-class ParserGis(Config):
+class ParserGis(Driver, SqliteDb):
     def __init__(self):
         self._url = None
         self._close_popup = None
         self._click_next_page = None
         self._select_obj_href = None
-        Config.__init__(self)
+        self._data_base = None
+        self._config_table_urls = None
+        super().__init__()
+        SqliteDb.__init__(self)
+
+    @property
+    def config_table_urls(self):
+        return self._config_table_urls
+
+    @config_table_urls.setter
+    def config_table_urls(self, value):
+        if self._config_table_urls is None:
+            self._config_table_urls = value
 
     @property
     def close_popup(self):
@@ -90,6 +93,15 @@ class ParserGis(Config):
             self._url = value
             self.execute_parser()
 
+    @property
+    def data_base(self):
+        return self._data_base
+
+    @data_base.setter
+    def data_base(self, value):
+        if self._data_base is None:
+            self._data_base = value
+
     def close_popup_cookies(self):
         try:
             self._driver.find_element_by_xpath(self._close_popup).click()
@@ -118,7 +130,11 @@ class ParserGis(Config):
             self.__next_pages()
         else:
             print(f"Собрано ссылок {self.queue.qsize()}")
-            print(list(self.queue.queue))
+            if self._data_base == "db":
+                self.create_data_urls(list(self.queue.queue), self._config_table_urls)
+                print(list(self.queue.queue)[0:10])
+            else:
+                print("Неверная операция")
             return self.queue
 
     def __next_pages(self):
@@ -136,16 +152,18 @@ class ParserGis(Config):
         return self.queue.qsize()
 
 
-class Crawl(Config, ExportData):
+class Crawl(Driver, ExportData):
     def __init__(self, links, export=None, config_table=None):
         self._links = links
         self.export = export
         self.config_table = config_table
+        self._timeout_random = None
         self._click_more_phone = None
         self._fetch_h1 = None
         self._fetch_phones = None
         self._fetch_emails = None
-        Config.__init__(self)
+        self.threadLocal = threading.local()
+        super().__init__()
         SqliteDb.__init__(self)
 
     @property
@@ -171,6 +189,17 @@ class Crawl(Config, ExportData):
     @property
     def button(self):
         return self._click_more_phone
+
+    @property
+    def timeout_random(self):
+        return self._timeout_random
+
+    @timeout_random.setter
+    def timeout_random(self, value):
+        if isinstance(value, tuple):
+            self._timeout_random = value
+        else:
+            raise ValueError("Тип данных для timeout_random должен быть контеж пример: (1,2)")
 
     @links.setter
     def links(self, value):
@@ -208,20 +237,21 @@ class Crawl(Config, ExportData):
 
     def execute_crawler(self, links):
         while True:
-            item = links.get()
-            self._driver.get(item)
+            link = links.get()
+            self._driver.get(link)
 
-            #time.sleep(random.randint(2, 3))
+            if self.timeout_random is not None:
+                time.sleep(random.randint(*self.timeout_random))
 
             try:
                 click_more_phone = self._driver.find_element_by_xpath(self._click_more_phone)
                 self._driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
-                pass
+                print("Нет элемента для клика click_more_phone")
 
             h1, phones, emails = self.collect_data(self._fetch_h1, self._fetch_phones, self._fetch_emails)
             try:
-                self._export_to(h1, phones, emails, type_format=self.export, config_table=self.config_table)
+                self._export_to(link, h1, phones, emails, type_format=self.export, config_table=self.config_table)
             except ValueError as e:
                 print(e)
                 self._driver.close()
@@ -237,11 +267,8 @@ class Crawl(Config, ExportData):
                 break
 
     def __call__(self):
-        thread = [
-            threading.Thread(target=self.execute_crawler, args=(self._links,), daemon=True)
-        ]
-        for t in thread:
-            t.start()
+
+        threading.Thread(target=self.execute_crawler, args=(self._links,), daemon=True).start()
         self._links.join()
 
         print("Все объекты обработаны")
@@ -249,15 +276,23 @@ class Crawl(Config, ExportData):
 
 class GenSpider(ABC):
     def __init__(self):
-        Config._path_dir = self.driver()
-        Config._options.headless = self.headless()
-        Config._user_agent = self.user_agent()
+        Driver.path_dir = self.driver()
+        Driver.options.headless = self.headless()
+        Driver.options.add_argument(f"user-agent={self.user_agent()}")
+
+        # создаем объект ParserGis для конфирурации запуска
         self.parser = ParserGis()
         self.parser.settings = self.config_window_parser()
         self.parser.start_url = self.start_url()
+        if self.export_data() == "db":
+            self.parser.config_table_urls = self.__config_table()
+            self.parser.data_base = self.export_data()
         self.parser.run_parser()
+
+        # создаем объект Crawler для конфирурации запуска
         self.crawler = self.__crawler()
-        self.fetch_elements = self.fetch_element()
+        self.timeout()
+        self.fetch_element()
 
     @abstractmethod
     def driver(self):
@@ -279,7 +314,12 @@ class GenSpider(ABC):
         Установка юзер-агента
         :return: str
         """
-
+    @abstractmethod
+    def timeout(self):
+        """
+        Таймаут модуля рандом
+        :return: tuple
+        """
     @abstractmethod
     def start_url(self):
         """
