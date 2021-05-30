@@ -132,7 +132,6 @@ class ParserGis(Driver, SqliteDb):
             print(f"Собрано ссылок {self.queue.qsize()}")
             if self._data_base == "db":
                 self.create_data_urls(list(self.queue.queue), self._config_table_urls)
-                print(list(self.queue.queue)[0:10])
             else:
                 print("Неверная операция")
             return self.queue
@@ -199,7 +198,7 @@ class Crawl(Driver, ExportData):
         if isinstance(value, tuple):
             self._timeout_random = value
         else:
-            raise ValueError("Тип данных для timeout_random должен быть контеж пример: (1,2)")
+            raise TypeError("Тип данных для timeout_random должен быть контеж пример: (1,2)")
 
     @links.setter
     def links(self, value):

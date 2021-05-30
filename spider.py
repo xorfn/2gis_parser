@@ -16,7 +16,6 @@ class SpiderTest(GenSpider):
     def user_agent(self):
         return "User-agent/6.0"
 
-
     def start_url(self):
         return "https://2gis.ru/krasnodar/search/%D0%9F%D0%B0%D1%80%D0%B8%D0%BA%D0%BC%D0%B0%D1%85%D0%B5%D1%80%D1%81%D0%BA%D0%B8%D0%B5/rubricId/305/filters/general_payment_type_card%3Bcovid_services_home%3Bbound%3Bhas_photos%3Bhas_site"
 
