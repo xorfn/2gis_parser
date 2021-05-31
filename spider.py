@@ -34,7 +34,7 @@ class SpiderTest(GenSpider):
         return ['name_company', 'phones', 'emails']
 
     def timeout(self):
-        self.crawler.timeout_random = (1, 2)
+        self.crawler.timeout_random = (0, 0)
 
     def fetch_element(self):
         self.crawler.button = '//*[@class="_b0ke8"]/a'
