@@ -58,7 +58,15 @@ class SqliteDb:
         """
         table, column = config_table_urls
         check_table = f"""select * from {table}"""
-        create_table = f"""CREATE TABLE {table} (PK INTEGER NOT NULL, url TEXT, {column[0]} TEXT, {column[1]} TEXT, {column[2]} TEXT, PRIMARY KEY (PK))"""
+        create_table = f"""
+        CREATE TABLE {table} (
+        PK INTEGER NOT NULL, 
+        url TEXT, 
+        {column[0].upper()} TEXT, 
+        {column[1].upper()} TEXT, 
+        {column[2].upper()} TEXT, 
+        DATE_ADD TEXT, PRIMARY KEY (PK))
+         """
 
         try:
             self.execute_db(check_table)
@@ -69,6 +77,6 @@ class SqliteDb:
         data_urls = (i for i in list(data))
 
         for url in data_urls:
-            write_data = f"""insert into {table} (url) values (?)"""
+            write_data = f"""insert into {table} (url, date_add) values (?, datetime('now','localtime'))"""
             self.execute_db(write_data, (url,), commit_db=True)
 

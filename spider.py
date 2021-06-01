@@ -64,10 +64,14 @@ class SpiderNedvizh(GenSpider):
         return "User-agent/6.0"
 
     def start_url(self):
-        return "https://2gis.ru/krasnodar/search/%D0%BD%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%B8%D0%BC%D0%BE%D1%81%D1%82%D1%8C"
+        return "https://2gis.ru/krasnodar/search/%D0%BD%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%B8%D0%BC%D0%BE%D1%81%D1%82%D1%8C/filters/bound%3Bhas_photos%3Bgeneral_payment_type_card?m=38.949278%2C45.020996%2F14.15"
+        # return "https://2gis.ru/krasnodar/search/%D0%BD%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%B8%D0%BC%D0%BE%D1%81%D1%82%D1%8C"
 
     def start_checkpoint(self):
-        return True
+        """
+
+        :return:
+        """
 
     def config_window_parser(self, parser):
         parser.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
@@ -78,7 +82,7 @@ class SpiderNedvizh(GenSpider):
         return 'db'
 
     def table_db(self):
-        return "nedvizh"
+        return "nedvizh2"
 
     def column_db(self):
         return ['name_company', 'phones', 'emails']
