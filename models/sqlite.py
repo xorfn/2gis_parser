@@ -61,7 +61,7 @@ class SqliteDb:
         create_table = f"""
         CREATE TABLE {table} (
         PK INTEGER NOT NULL, 
-        url TEXT, 
+        URL TEXT, 
         {column[0].upper()} TEXT, 
         {column[1].upper()} TEXT, 
         {column[2].upper()} TEXT, 
