@@ -62,6 +62,11 @@ class ExportData(SqliteDb):
                        "@" in email.get_attribute('href').split(":")[1]])
         }
 
-        write_data = f"""update {table} set {column[0]} = '{data_db['h1']}', {column[1]} = '{data_db['phones']}', 
-                        {column[2]}='{data_db['emails']}' where url = '{link}' """
+        write_data = f"""update {table} set 
+                        {column[0]} = '{data_db['h1']}', 
+                        {column[1]} = '{data_db['phones']}', 
+                        {column[2]}='{data_db['emails']}', 
+                        DATE_UPDATE = datetime('now','localtime') 
+                        where url = '{link}'
+                        """
         self.execute_db(write_data, commit_db=True)

@@ -65,7 +65,9 @@ class SqliteDb:
         {column[0].upper()} TEXT, 
         {column[1].upper()} TEXT, 
         {column[2].upper()} TEXT, 
-        DATE_ADD TEXT, PRIMARY KEY (PK))
+        DATE_ADD TEXT,
+        DATE_UPDATE TEXT,
+        PRIMARY KEY (PK))
          """
 
         try:
