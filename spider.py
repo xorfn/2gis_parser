@@ -21,9 +21,18 @@ class SpiderParicMos(GenSpider):
         return "https://2gis.ru/krasnodar/search/%D0%9F%D0%B0%D1%80%D0%B8%D0%BA%D0%BC%D0%B0%D1%85%D0%B5%D1%80%D1%81%D0%BA%D0%B8%D0%B5"
 
     def start_checkpoint(self):
+        """
+        Если нужно продолжить с точки остановки то установи флаг True
+        :return:
+        """
         return True
 
     def config_window_parser(self,parser):
+        """
+        Конфигурация для окна ParserGis
+        :param parser: объект ParserGis
+        :return: property
+        """
         parser.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
         parser.click_next_page = '//*[@id="root"]/div/div/div[1]/div[1]/div[2]/div/div/div[2]/div/div/div/div[2]/div[2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
         parser.select_obj_href = "div._1h3cgic > a._pbcct4"
@@ -41,7 +50,13 @@ class SpiderParicMos(GenSpider):
         self.crawler.timeout_random = (0, 0)
 
     def fetch_element(self,crawler):
+        """
+        Извлекает элемент определенный по xpath
+        :param crawler: объект Crawler
+        :return: property
+        """
         crawler.button = '//*[@class="_b0ke8"]/a'
+
         crawler.fetch_h1 = '//h1'
         crawler.fetch_phones = "div._49kxlr > div._b0ke8 > a._1nped2zk"
         crawler.fetch_emails = "div._49kxlr > div > a._1nped2zk"
@@ -69,9 +84,10 @@ class SpiderNedvizh(GenSpider):
 
     def start_checkpoint(self):
         """
-
+        Если необходимо начать со старнового URL то установить флаг на False
         :return:
         """
+        return False
 
     def config_window_parser(self, parser):
         parser.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'

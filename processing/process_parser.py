@@ -391,7 +391,6 @@ class GenSpider(ABC):
         Соберет неизвлеченные данные по URL
         :return:
         """
-        return False
 
     @abstractmethod
     def config_window_parser(self, parser):
