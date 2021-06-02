@@ -326,10 +326,14 @@ class GenSpider(ABC):
         Driver.options.headless = self.headless()
         Driver.options.add_argument(f"user-agent={self.user_agent()}")
 
-        # создаем объект классов для конфирурации запуска
+        # создаем объекты классов для конфирурации запуска
         self.__config_abc()
 
     def __config_abc(self):
+        """
+
+        :return:
+        """
         self.queue_checkpoint = queue.Queue()
         self.sqlite_mod = SqliteDb()
 
@@ -348,7 +352,6 @@ class GenSpider(ABC):
             self.crawler = self.__crawler(queue_links=self.__checkpoint(self.__config_table()))
         self.timeout()
         self.fetch_element(self.crawler)
-
 
     @abstractmethod
     def driver(self):
