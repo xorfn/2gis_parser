@@ -48,7 +48,6 @@ class SqliteDb:
         else:
             return con.execute(sql, params)
 
-
     def create_data_urls(self, data, config_table_urls):
         """
 
@@ -59,15 +58,15 @@ class SqliteDb:
         table, column = config_table_urls
         check_table = f"""select * from {table}"""
         create_table = f"""
-        CREATE TABLE {table} (
-        PK INTEGER NOT NULL, 
-        URL TEXT, 
-        {column[0].upper()} TEXT, 
-        {column[1].upper()} TEXT, 
-        {column[2].upper()} TEXT, 
-        DATE_ADD TEXT,
-        DATE_UPDATE TEXT,
-        PRIMARY KEY (PK))
+            CREATE TABLE {table} (
+            PK INTEGER NOT NULL, 
+            URL TEXT, 
+            {column[0].upper()} TEXT, 
+            {column[1].upper()} TEXT, 
+            {column[2].upper()} TEXT, 
+            DATE_ADD TEXT,
+            DATE_UPDATE TEXT,
+            PRIMARY KEY (PK))
          """
 
         try:
@@ -81,4 +80,3 @@ class SqliteDb:
         for url in data_urls:
             write_data = f"""insert into {table} (url, date_add) values (?, datetime('now','localtime'))"""
             self.execute_db(write_data, (url,), commit_db=True)
-

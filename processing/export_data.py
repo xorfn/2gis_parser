@@ -8,22 +8,22 @@ class ExportData(SqliteDb):
         self.result = {}
         super().__init__()
 
-    def _export_to(self,link, h1, phones, emails, type_format="csv", config_table=None):
+    def _export_to(self, link, h1, phones, emails, type_format="csv", config_table=None):
         if type_format == 'json':
-            self.export_json(h1, phones, emails)
+            self.__export_json(h1, phones, emails)
 
         elif type_format == 'csv':
-            self.export_csv(h1, phones, emails)
+            self.__export_csv(h1, phones, emails)
 
         elif type_format == "db":
             if all(config_table):
-                self.export_db(link, h1, phones, emails, config_table)
+                self.__export_db(link, h1, phones, emails, config_table)
             else:
                 raise Exception("Нет данных о создаваемой таблице")
         else:
             raise Exception(f'Несуществует экспорта для {type_format}. Выберите формат экспорта csv или json')
 
-    def export_json(self, h1, phones, emails):
+    def __export_json(self, h1, phones, emails):
         org_json = {h1: [{
             "phones": [phone.get_attribute('href').split(":")[1] for phone in phones],
             "emails": [email.get_attribute('href').split(":")[1] for email in emails
@@ -38,7 +38,7 @@ class ExportData(SqliteDb):
             file.write(type_json)
 
     @staticmethod
-    def export_csv(h1, phones, emails):
+    def __export_csv(h1, phones, emails):
         org_to_csv = {
             'name': h1,
             'phones': [phone.get_attribute('href').split(":")[1] for phone in phones],
@@ -51,15 +51,15 @@ class ExportData(SqliteDb):
             writer = csv.writer(file, delimiter=";", lineterminator="\r")
             writer.writerow((org_to_csv['name'], org_to_csv['phones'], ', '.join(org_to_csv['emails'])))
 
-    def export_db(self, link, h1, phones, emails, config_table):
+    def __export_db(self, link, h1, phones, emails, config_table):
         table, column = config_table
 
         data_db = {
 
             'h1': h1,
             'phones': ', '.join([phone.get_attribute('href').split(":")[1] for phone in phones]),
-            'emails': ', '.join([email.get_attribute('href').split(":")[1] for email in emails if
-                       "@" in email.get_attribute('href').split(":")[1]])
+            'emails': ', '.join([email.get_attribute('href').split(":")[1] for email in emails
+                                 if "@" in email.get_attribute('href').split(":")[1]])
         }
 
         write_data = f"""update {table} set 

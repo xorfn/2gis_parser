@@ -349,7 +349,9 @@ class GenSpider(ABC):
             # создаем объект Crawler для конфирурации запуска
             self.crawler = self.__crawler(queue_links=self.parser.queue)
         else:
-            self.crawler = self.__crawler(queue_links=self.__checkpoint(self.__config_table()))
+            config_table = self.__config_table()
+            queue_link = self.__checkpoint(config_table)
+            self.crawler = self.__crawler(queue_links=self.__checkpoint(queue_link))
         self.timeout()
         self.fetch_element(self.crawler)
 
@@ -398,7 +400,8 @@ class GenSpider(ABC):
     @abstractmethod
     def config_window_parser(self, parser):
         """
-        Конфигуратор окна для ParserGis. Закрытие всяких попапов, хождение по пагинации, выбор селекта детального объекта
+        Конфигуратор окна для ParserGis. Закрытие всяких попапов, хождение по пагинации,
+        выбор селекта детального объекта
         :return: property
         """
 
@@ -423,8 +426,8 @@ class GenSpider(ABC):
 
     def __checkpoint(self, config_table):
         """
-
-        :param config_table:
+        Создаем очередть из URL которые нужно обойти
+        :param config_table: данные таблицы которые использывалить на старте
         :return:
         """
         name_table, column = config_table
@@ -439,18 +442,13 @@ class GenSpider(ABC):
 
     def __config_table(self):
         """
-
-        :return:
+        Проверяем форсвт экспорта и передаем данные таблицы для следущей итерации
+        :return: данные созданной таблицы
         """
         if self.export_data() == "db":
             return self.table_db(), self.column_db()
 
     def __crawler(self, queue_links):
-        """
-
-        :param qlinks:
-        :return:
-        """
         return Crawl(queue_links, export=self.export_data(), config_table=self.__config_table())
 
     @abstractmethod

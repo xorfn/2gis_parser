@@ -85,9 +85,10 @@ class SpiderNedvizh(GenSpider):
     def start_checkpoint(self):
         """
         Если необходимо начать со старнового URL то установить флаг на False
+        либо True если хотите продолжить с точки окончания сбора данных
         :return:
         """
-        return False
+        return True
 
     def config_window_parser(self, parser):
         parser.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
