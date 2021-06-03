@@ -46,8 +46,8 @@ class SpiderParicMos(GenSpider):
     def column_db(self):
         return ['name_company', 'phones', 'emails']
 
-    def timeout(self):
-        self.crawler.timeout_random = (0, 0)
+    def timeout(self, crawler):
+        crawler.timeout_random = (0, 0)
 
     def fetch_element(self,crawler):
         """
@@ -88,7 +88,7 @@ class SpiderNedvizh(GenSpider):
         либо True если хотите продолжить с точки окончания сбора данных
         :return:
         """
-        return True
+        return False
 
     def config_window_parser(self, parser):
         parser.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
@@ -104,8 +104,8 @@ class SpiderNedvizh(GenSpider):
     def column_db(self):
         return ['name_company', 'phones', 'emails']
 
-    def timeout(self):
-        self.crawler.timeout_random = (0, 0)
+    def timeout(self, crawler):
+        crawler.timeout_random = (0, 0)
 
     def fetch_element(self, crawler):
         crawler.button = '//*[@class="_b0ke8"]/a'

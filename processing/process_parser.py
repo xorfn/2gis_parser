@@ -348,11 +348,13 @@ class GenSpider(ABC):
 
             # создаем объект Crawler для конфирурации запуска
             self.crawler = self.__crawler(queue_links=self.parser.queue)
+
         else:
             config_table = self.__config_table()
-            queue_link = self.__checkpoint(config_table)
-            self.crawler = self.__crawler(queue_links=self.__checkpoint(queue_link))
-        self.timeout()
+            run_gen_queue_link = self.__checkpoint(config_table)
+            self.crawler = self.__crawler(queue_links=run_gen_queue_link)
+
+        self.timeout(self.crawler)
         self.fetch_element(self.crawler)
 
     @abstractmethod
@@ -377,7 +379,7 @@ class GenSpider(ABC):
         :return: str
         """
     @abstractmethod
-    def timeout(self):
+    def timeout(self, crawler):
         """
         Таймаут модуля рандом
         :return: tuple
