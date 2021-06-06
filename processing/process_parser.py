@@ -263,6 +263,7 @@ class Crawl(Driver, ExportData):
         :param email:
         :return:
         """
+
         name = self._driver.find_element_by_xpath(h1).text
         phones = self._driver.find_elements_by_css_selector(phone)
         emails = self._driver.find_elements_by_css_selector(email)
@@ -284,12 +285,15 @@ class Crawl(Driver, ExportData):
                 time.sleep(random.randint(*self.timeout_random))
 
             try:
-                click_more_phone = self._driver.find_element_by_xpath(self._click_more_phone)
-                self._driver.execute_script("arguments[0].click();", click_more_phone)
+                if self._click_more_phone is not None:
+                    click_more_phone = self._driver.find_element_by_xpath(self._click_more_phone)
+                    self._driver.execute_script("arguments[0].click();", click_more_phone)
             except NoSuchElementException:
                 print("Нет элемента для клика click_more_phone")
 
-            h1, phones, emails = self.collect_data(self._fetch_h1, self._fetch_phones, self._fetch_emails)
+            export_elements = self._fetch_h1, self._fetch_phones, self._fetch_emails
+            h1, phones, emails = self.collect_data(*export_elements)
+
             try:
                 self._export_to(link, h1, phones, emails, type_format=self.export, config_table=self.config_table)
             except ValueError as e:

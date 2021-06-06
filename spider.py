@@ -3,7 +3,7 @@ import time
 import threading
 
 
-class SpiderParicMos(GenSpider):
+class OKna(GenSpider):
     """
     Пример генерируемого паука
     """
@@ -18,16 +18,16 @@ class SpiderParicMos(GenSpider):
         return "User-agent/6.0"
 
     def start_url(self):
-        return "https://2gis.ru/krasnodar/search/%D0%9F%D0%B0%D1%80%D0%B8%D0%BA%D0%BC%D0%B0%D1%85%D0%B5%D1%80%D1%81%D0%BA%D0%B8%D0%B5"
+        return "https://2gis.ru/krasnodar/search/%D0%9E%D0%BA%D0%BD%D0%B0?m=39.016886%2C45.02984%2F16.02"
 
     def start_checkpoint(self):
         """
         Если нужно продолжить с точки остановки то установи флаг True
         :return:
         """
-        return True
+        return False
 
-    def config_window_parser(self,parser):
+    def config_window_parser(self, parser):
         """
         Конфигурация для окна ParserGis
         :param parser: объект ParserGis
@@ -41,7 +41,7 @@ class SpiderParicMos(GenSpider):
         return 'db'
 
     def table_db(self):
-        return "parik"
+        return "okna"
 
     def column_db(self):
         return ['name_company', 'phones', 'emails']
@@ -49,7 +49,7 @@ class SpiderParicMos(GenSpider):
     def timeout(self, crawler):
         crawler.timeout_random = (0, 0)
 
-    def fetch_element(self,crawler):
+    def fetch_element(self, crawler):
         """
         Извлекает элемент определенный по xpath
         :param crawler: объект Crawler
@@ -64,7 +64,8 @@ class SpiderParicMos(GenSpider):
     def __call__(self):
         return self.crawler()
 
-class SpiderNedvizh(GenSpider):
+
+class ZVod(GenSpider):
     """
     Пример генерируемого паука
     """
@@ -79,8 +80,9 @@ class SpiderNedvizh(GenSpider):
         return "User-agent/6.0"
 
     def start_url(self):
-        return "https://2gis.ru/krasnodar/search/%D0%BD%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%B8%D0%BC%D0%BE%D1%81%D1%82%D1%8C/filters/bound%3Bhas_photos%3Bgeneral_payment_type_card?m=38.949278%2C45.020996%2F14.15"
-        # return "https://2gis.ru/krasnodar/search/%D0%BD%D0%B5%D0%B4%D0%B2%D0%B8%D0%B6%D0%B8%D0%BC%D0%BE%D1%81%D1%82%D1%8C"
+        return "https://2gis.ru/krasnodar/search/%D0%A7%D1%91%D1%80%D0%BD%D1%8B%D0%B9%20%D0%BC%D0%B5%D1%82%D0%B0%D0" \
+               "%BB%D0%BB%D0%BE%D0%BF%D1%80%D0%BE%D0%BA%D0%B0%D1%82/rubricId/615/filters/has_photos?m=39.04778%2C45" \
+               ".03613%2F16.79 "
 
     def start_checkpoint(self):
         """
@@ -92,14 +94,14 @@ class SpiderNedvizh(GenSpider):
 
     def config_window_parser(self, parser):
         parser.close_popup = '//*[@id="root"]/div/div/div[3]/footer/div[2]'
-        parser.click_next_page = '//*[@id="root"]/div/div/div[1]/div[1]/div[2]/div/div/div[2]/div/div/div/div[2]/div[2]/div[1]/div/div/div[1]/div[4]/div[2]/div[2]'
+        parser.click_next_page = '//*[@id="root"]/div/div/div[1]/div[1]/div[2]/div/div/div[2]/div/div/div/div[2]/div[2]/div[1]/div/div/div[1]/div[3]/div[2]/div[2]'
         parser.select_obj_href = "div._1h3cgic > a._pbcct4"
 
     def export_data(self):
         return 'db'
 
     def table_db(self):
-        return "nedvizh2"
+        return "zavod"
 
     def column_db(self):
         return ['name_company', 'phones', 'emails']
@@ -119,13 +121,13 @@ class SpiderNedvizh(GenSpider):
 
 if __name__ == "__main__":
 
-    parik_test = SpiderParicMos()
-    ned_test = SpiderNedvizh()
+    okna = OKna()
+    zavod = ZVod()
 
     full_time = time.time()
 
-    p1 = threading.Thread(target=parik_test, daemon=True)
-    p2 = threading.Thread(target=ned_test, daemon=True)
+    p1 = threading.Thread(target=okna, daemon=True)
+    p2 = threading.Thread(target=zavod, daemon=True)
 
     p1.start()
     p2.start()
